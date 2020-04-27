@@ -9,5 +9,10 @@
   "author": "refar",
   "devDependencies": {
     "electron": "^8.2.3"
+  },
+  "dependencies": {
+    "cnpm": "^6.1.1",
+    "express": "^4.17.1",
+    "node-xlsx": "^0.15.0"
   }
 }
