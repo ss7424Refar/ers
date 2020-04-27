@@ -1,0 +1,13 @@
+{
+  "name": "ers",
+  "version": "1.0.0",
+  "description": "A minimal Electron application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "refar",
+  "devDependencies": {
+    "electron": "^8.2.3"
+  }
+}
