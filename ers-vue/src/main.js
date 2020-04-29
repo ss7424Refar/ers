@@ -10,6 +10,8 @@ import 'bootstrap-vue/dist/bootstrap-vue.css'
 Vue.use(BootstrapVue)
 Vue.use(BootstrapVueIcons)
 
+import './plugins/table.js'
+
 import axios from 'axios'
 Vue.prototype.$http= axios
 

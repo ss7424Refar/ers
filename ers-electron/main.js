@@ -13,10 +13,13 @@ function createWindow () {
     }
   })
 
+  mainWindow.removeMenu()
+
   // and load the index.html of the app.
  mainWindow.loadFile('./dist/index.html')
  // mainWindow.loadFile('index.html')
-//  mainWindow.loadURL('http://localhost:8080/');
+  const options = {extraHeaders: 'pragma: no-cache\n'}
+ // mainWindow.loadURL('http://localhost:8080/', options);
 
   // Open the DevTools.
   mainWindow.webContents.openDevTools({mode:'bottom'})
