@@ -1,6 +1,15 @@
 var express = require('express');
 var endPoint = express();
 
+var allowCrossDomain = function (req, res, next) {
+    // 所有的接口都可以访问
+    res.header('Access-Control-Allow-Origin', '*');
+    // 自定义中间件，设置跨域需要的响应头
+    res.header('Access-Control-Allow-Headers', '*');
+    next();
+}
+endPoint.use(allowCrossDomain)
+
 // 仅用于调试
 endPoint.get('/', function (req, res) {
     res.send('Hello World');

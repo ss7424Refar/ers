@@ -8,16 +8,18 @@ function createWindow () {
     width: 1000,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      zoomFactor: 0.75
     }
   })
 
   // and load the index.html of the app.
- mainWindow.loadFile('index.html')
+ mainWindow.loadFile('./dist/index.html')
+ // mainWindow.loadFile('index.html')
 //  mainWindow.loadURL('http://localhost:8080/');
 
   // Open the DevTools.
-  mainWindow.webContents.openDevTools()
+  mainWindow.webContents.openDevTools({mode:'bottom'})
 }
 
 // This method will be called when Electron has finished
