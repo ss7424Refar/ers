@@ -3,7 +3,6 @@ import VueRouter from 'vue-router'
 import Index from  '../views/Index.vue'
 
 import Detail from '../views/Index/Detail.vue'
-import Report from '../views/Index/Report.vue'
 
 Vue.use(VueRouter)
 
@@ -12,6 +11,8 @@ Vue.use(VueRouter)
       path: '/',
       name: 'index',
       component: Index,
+      // 如果是'/', index中的router-view会是空白. 需要重定向, 不是很明白..
+      redirect: '/detail',
       children:[
         {
           path:'detail',
@@ -33,6 +34,8 @@ Vue.use(VueRouter)
 ]
 
 const router = new VueRouter({
+  // mode: 'history', // 这个还需要后端的支持, 太麻烦了.
+  // base: process.env.BASE_URL,
   routes
 })
 

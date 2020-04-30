@@ -4,7 +4,9 @@
   "description": "A minimal Electron application",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build-linux": "electron-packager ./ --out ./ers-app --platform=linux --arch=x64 --overwrite",
+    "build-window": "electron-packager ./ --out ./ers-app --platform=win32 --arch=x64 --overwrite"
   },
   "author": "refar",
   "devDependencies": {
@@ -12,6 +14,7 @@
   },
   "dependencies": {
     "cnpm": "^6.1.1",
+    "electron-packager": "^14.2.1",
     "express": "^4.17.1",
     "moment": "^2.24.0",
     "node-xlsx": "^0.15.0"

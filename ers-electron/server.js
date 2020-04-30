@@ -16,21 +16,27 @@ endPoint.get('/', function (req, res) {
     res.send('Hello World');
 });
 
-// http://localhost:8081/detail?custom=hello&date=2020-01
+// http://localhost:8081/detail?form={}
 endPoint.get('/detail', function (req, res) {
-   // 获取参数
-    var keyword = req.query.keyword;
-    var start = req.query.start;
-    var end = req.query.end;
+
+    var formData = req.query.formData;
+    if ('undefined' === typeof(formData)) {
+        return res.end(JSON.stringify({
+            total:0,
+            rows:[]
+        }))
+    }
+
+    // 获取参数
+    formData = JSON.parse(formData)
+    var keyword = formData.keyword;
+    var start = formData.start;
+    var end = formData.end;
 
     var xlsx = require("node-xlsx");
     var moment = require('moment');
 
-    var sheet = xlsx.parse("/home/refar/WebstormProjects/ers/ers-electron/resource/1.xlsx");
-
-    // var keyword = '宜昌光电';
-    // var start = '2020-04-01';
-    // var end = '2020-04-30'; // 需要换成当月.
+    var sheet = xlsx.parse("./resource/1.xlsm");
 
     // 取得 应收款录入
     var dataArray = [];
@@ -219,9 +225,49 @@ endPoint.get('/detail', function (req, res) {
 
     })
 
-    res.end(JSON.stringify(result))
+    // 处理result成total和rows的形式
+    offset = req.query.offset
+    limit = req.query.limit
+    resultn = {
+        "total": result.length,
+        "rows": (offset + limit >= result.length) ? result.slice(offset, result.length) : result.slice(offset, offset + limit)
+    };
+
+    res.end(JSON.stringify(resultn))
 
 });
+
+
+endPoint.get('/setOption', function (req, res) {
+    var cosOption = [{
+        "value" : null,
+        "text"  : "请选择客户信息"
+    }]
+
+    var xlsx = require("node-xlsx");
+    var sheet = xlsx.parse("./resource/1.xlsm");
+
+    sheet.forEach(function (item, index, array) {
+        if ('客户信息' === item['name']) {
+            for(var rowid in item['data']){
+                if (rowid >= 1) {
+                    var rows = item['data'][rowid];
+                    // 这里会产生empty之类的信息, 所以转换两次成null
+                    var rown = JSON.parse(JSON.stringify(rows));
+
+                    if (null !== rown[0]){
+                        var temp = {
+                            "value"      : rown[0],
+                            "text"      : rown[0]
+                        };
+                        cosOption.push(temp);
+                    }
+                }
+            }
+        }
+    })
+    res.end(JSON.stringify(cosOption))
+})
 
 function formatter(data) {
     return null == data ? 0 : data;
@@ -246,6 +292,15 @@ function setDirect(data) {
         return '贷'
     }
 }
+
+endPoint.use(function (err, req, res, next) {
+    // set locals, only providing error in development
+    // res.locals.message = err.message;
+    // res.locals.error = req.app.get('env') === 'development' ? err : {};
+    // render the error page
+
+    res.status(err.status || 500).json(err.message);
+});
 
 // start server
 var server = endPoint.listen(8081, function () {

@@ -1,30 +1,38 @@
 <template>
     <div class="detail">
         <h3><b-badge variant="dark">查询条件</b-badge></h3>
-        <!--<b-form @submit="onSubmit" @reset="onReset">-->
-            <!--<b-row>-->
-                <!--<b-col md="4">-->
-                    <!--<b-form-group label-cols-sm="2" label="资产编号:">-->
-                        <!--<b-input-group>-->
-                            <!--<b-form-input v-model="form.fixed"></b-form-input>-->
-                        <!--</b-input-group>-->
-                    <!--</b-form-group>-->
-                <!--</b-col>-->
-            <!--</b-row>-->
+        <b-form @reset="onReset" @submit="onSubmit">
+            <b-row>
+                <b-col md="4">
+                    <b-form-group label-cols-sm="2" label="客户信息:">
+                        <b-form-select v-model="form.keyword" :options="cosOptions"></b-form-select>
+                    </b-form-group>
+                </b-col>
+                <b-col md="4">
+                    <b-form-group label-cols-sm="2" label="开始时间:">
+                        <b-form-datepicker v-model="form.start" class="mb-2" label-no-date-selected="请输入开始时间"></b-form-datepicker>
+                    </b-form-group>
+                </b-col>
+                <b-col md="4">
+                    <b-form-group label-cols-sm="2" label="终止时间:">
+                        <b-form-datepicker v-model="form.end" class="mb-2" label-no-date-selected="请输入结束时间"></b-form-datepicker>
+                    </b-form-group>
+                </b-col>
+            </b-row>
 
-            <!--<b-row>-->
-                <!--<b-col offset-md="4">-->
-                    <!--<b-button variant="info" type="submit">查询</b-button>-->
-                <!--</b-col>-->
-                <!--<b-col md="7">-->
-                    <!--<b-button variant="primary" type="reset">重置</b-button>-->
-                <!--</b-col>-->
-            <!--</b-row>-->
-        <!--</b-form>-->
+            <b-row>
+                <b-col offset-md="4">
+                    <b-button variant="info" type="submit">查询</b-button>
+                </b-col>
+                <b-col md="7">
+                    <b-button variant="primary" type="reset">重置</b-button>
+                </b-col>
+            </b-row>
+        </b-form>
 
         <hr>
 
-        <BootstrapTable ref="table" :columns="columns" :options="options"></BootstrapTable>
+        <BootstrapTable ref="table" :columns="columns" :options="options" @on-load-error="onLoadError"></BootstrapTable>
     </div>
 </template>
 
@@ -33,6 +41,12 @@
         name: "Detail",
         data() {
             return {
+                form: {
+                    keyword: null,
+                    start: null,
+                    end: null,
+                },
+                cosOptions: null,
                 columns: [
                     {
                         field: 'date',
@@ -93,28 +107,55 @@
                     pageSize: 20,
                     pageList: [10, 25, 50],
                     queryParams: function(params) {
-                        params.keyword = '浙江金徕 玻璃纸'
-                        params.start = '2020-04-01'
-                        params.end = '2020-04-30'
+                        params.keyword = null
+                        params.start = ''
+                        params.end = ''
                         return params
                     },
                     locale: 'zh-CN'
                 }
             }
         },
-        // created(){
-        //     // this.convert();
-        // },
+        mounted(){
+            this.setOption();
+        },
         methods: {
-            // convert: function () {
-            //     this.$http.get("http://localhost:8081/").then(res => {
-            //         console.log(res)
-            //     })
-            // }
+            setOption: function () {
+                this.$http.get("http://localhost:8081/setOption").then(res => {
+                    this.cosOptions = res.data;
+                })
+            },
+            onLoadError: function (status, jqXHR) {
+                this.message(jqXHR.responseText)
+            },
+            onSubmit: function (evt) {
+                evt.preventDefault()
 
+                if (null == this.form.start || null == this.form.end || null == this.form.keyword) {
+                    this.message('请填入完整的筛选条件!')
+                    return;
+                }
 
+                let formData = JSON.stringify(this.form)
+                this.options.queryParams = function (params) {
+                    params.formData = formData
+                    return params
+                }
 
-
+            },
+            onReset: function (evt) {
+                this.form.keyword = null
+                this.form.start = null
+                this.form.end = null
+            },
+            message: function (msg) {
+                this.$bvToast.toast(msg, {
+                    title: '/(ㄒoㄒ)/~~我是可爱的信息提示',
+                    variant: 'primary',
+                    // autoHideDelay: 5000,
+                    solid: true
+                })
+            }
         }
     }
 </script>
