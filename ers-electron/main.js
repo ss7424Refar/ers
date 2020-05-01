@@ -5,8 +5,8 @@ const path = require('path')
 function createWindow () {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 1000,
-    height: 800,
+    width: 1500,
+    height: 1000,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       zoomFactor: 0.75
@@ -21,8 +21,11 @@ function createWindow () {
   const options = {extraHeaders: 'pragma: no-cache\n'}
  // mainWindow.loadURL('http://localhost:8080/', options);
 
-  // Open the DevTools.
-  mainWindow.webContents.openDevTools({mode:'bottom'})
+  if (process.env.NODE_ENV == 'development') {
+      // Open the DevTools.
+      mainWindow.webContents.openDevTools({mode:'bottom'})
+  }
+
 }
 
 // This method will be called when Electron has finished
@@ -45,5 +48,7 @@ app.on('activate', function () {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
+
+console.log(process.env.NODE_ENV)
 
 require('./server.js');

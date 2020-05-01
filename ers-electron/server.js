@@ -1,6 +1,11 @@
 var express = require('express');
 var endPoint = express();
 
+const path = require('path')
+targetPath = path.join(__dirname, '/resource/hello.xlsm')
+const xlsx = require("node-xlsx");
+var moment = require('moment');
+
 var allowCrossDomain = function (req, res, next) {
     // 所有的接口都可以访问
     res.header('Access-Control-Allow-Origin', '*');
@@ -13,7 +18,7 @@ endPoint.use(allowCrossDomain)
 
 // 仅用于调试
 endPoint.get('/', function (req, res) {
-    res.send('Hello World');
+    res.end('Hello World');
 });
 
 // http://localhost:8081/detail?form={}
@@ -33,10 +38,7 @@ endPoint.get('/detail', function (req, res) {
     var start = formData.start;
     var end = formData.end;
 
-    var xlsx = require("node-xlsx");
-    var moment = require('moment');
-
-    var sheet = xlsx.parse("./resource/1.xlsm");
+    var sheet = xlsx.parse(targetPath);
 
     // 取得 应收款录入
     var dataArray = [];
@@ -120,10 +122,6 @@ endPoint.get('/detail', function (req, res) {
             newArray.push(item)
         }
     });
-
-
-    last = last.toFixed(2);
-    last2 = last2.toFixed(2);
 
     // 排序
     newArray.sort(sortBy('date'))
@@ -224,16 +222,11 @@ endPoint.get('/detail', function (req, res) {
         }
 
     })
+    // 四舍五入
+    result = fixed(result)
 
     // 处理result成total和rows的形式
-    offset = req.query.offset
-    limit = req.query.limit
-    resultn = {
-        "total": result.length,
-        "rows": (offset + limit >= result.length) ? result.slice(offset, result.length) : result.slice(offset, offset + limit)
-    };
-
-    res.end(JSON.stringify(resultn))
+    res.end(JSON.stringify(sendFinal(req.query.offset, req.query.limit, result)))
 
 });
 
@@ -244,8 +237,7 @@ endPoint.get('/setOption', function (req, res) {
         "text"  : "请选择客户信息"
     }]
 
-    var xlsx = require("node-xlsx");
-    var sheet = xlsx.parse("./resource/1.xlsm");
+    var sheet = xlsx.parse(targetPath);
 
     sheet.forEach(function (item, index, array) {
         if ('客户信息' === item['name']) {
@@ -269,6 +261,164 @@ endPoint.get('/setOption', function (req, res) {
     res.end(JSON.stringify(cosOption))
 })
 
+
+endPoint.get('/report', function (req, res) {
+    var formData = req.query.formData;
+    if ('undefined' === typeof(formData)) {
+        return res.end(JSON.stringify({
+            total:0,
+            rows:[]
+        }))
+    }
+
+    // 获取参数
+    formData = JSON.parse(formData)
+    var start = formData.start;
+    var end = formData.end;
+
+    // 取得 应收款录入
+    var dataArray = [];
+    // 取得客户上期结账
+    var cosArray = [];
+
+    var sheet = xlsx.parse(targetPath);
+
+    sheet.forEach(function (item, index, array) {
+        if ('应收账款录入' === item['name']) {
+            for(var rowid in item['data']){
+                if (rowid >= 2) {
+                    var rows = item['data'][rowid];
+                    // 这里会产生empty之类的信息, 所以转换两次成null
+                    var rown = JSON.parse(JSON.stringify(rows));
+
+                    if (null !== rown[0]){
+                        var temp = {
+                            // "date"       : new Date(1900, 0, rown[0] - 1).toLocaleDateString(),
+                            "date"       : moment(new Date(1900, 0, rown[0] - 1)).format('YYYY-MM-DD'),
+                            "custom"     : rown[2],
+                            "money"      : formatter(rown[8]),
+                            "paper_money": formatter(rown[9]),
+                            "get"        : formatter(rown[11]),
+                            "remark"     : formatter(rown[12])
+                        };
+                        dataArray.push(temp);
+
+                    }
+                }
+            }
+        }
+        if ('客户信息' === item['name']) {
+            for(var rowid in item['data']){
+                if (rowid >= 1) {
+                    var rows = item['data'][rowid];
+                    // 这里会产生empty之类的信息, 所以转换两次成null
+                    var rown = JSON.parse(JSON.stringify(rows));
+
+                    if (null !== rown[0]){
+                        var temp = {
+                            "no"          : cosArray.length + 1,
+                            "custom"      : rown[0],
+                            "first_money" : formatter(rown[1]),
+                            "paper_money" : 0   // 因为excel上面都是没有单元格.
+                        };
+                        cosArray.push(temp);
+
+                    }
+                }
+            }
+
+        }
+    })
+
+    // report表数据
+    var result = []
+
+    // 再定义t单位的变量. 用于底部合计
+    t1 = 0; t2 = 0; t3 = 0; t4 =0; t5 = 0; t6 = 0; t7 = 0; t8 = 0;
+    cosArray.forEach(function (itemC, indexC, arrayC) {
+        // 初期上期应收款
+        var last = Number(itemC['first_money'])
+        // 上期未收款
+        var last2 = Number(itemC['paper_money'])
+
+        // 合计
+        var m = 0; // 借方金额
+        var p = 0; // 开票金额
+        var g = 0; // 贷方金额
+        var r = 0; // 备注
+        var thisMoney = 0;
+        var thisMoney2 = 0;
+
+        // 从应收录入里找客户
+        dataArray.forEach(function (itemD, indexD, arrayD) {
+            if (itemC['custom'] === itemD['custom']) {
+                // 客户信息中的 【期初应收账款余额】 + 小于起始时间的【借方金额】-【贷方(收款)】,
+                if (moment(itemD['date']).isBefore(start)) {
+                    last = last + Number(itemD['money']) - Number(itemD['get']);
+                    // 客户信息中的【期初未开票余额】 + 小于起始时间的【借方金额】 - 【已开票/开票金额】
+                    last2 = last2 + Number(itemD['money']) - Number(itemD['paper_money']);
+                } else if (moment(itemD['date']).isBetween(start, end, null, '[]')) {
+                    // 借方金额
+                    m = m +  Number(itemD['money']);
+                    p = p + Number(itemD['paper_money']);
+                    g = g + Number(itemD['get']);
+                    r = r + Number(itemD['remark']);
+                }
+            }
+
+            // 期末余额
+            thisMoney = last + m - g; // 上期应收账款余额 + 借方发生额 - 贷方发生额
+            thisMoney2 = last2 + m - p; // 上期未开票金额 + 借方发生额 - 已开票金额
+
+        })
+        // 真就一个个变量合计呗
+        t1 = t1 + last;
+        t2 = t2 + last2;
+        t3 = t3 + m;
+        t4 = t4 + p;
+        t5 = t5 + g;
+        t6 = t6 + thisMoney;
+        t7 = t7 + thisMoney2;
+        t8 = t8 + r;
+
+        temp = {
+            "no"         : itemC['no'],
+            "custom"     : itemC['custom'],
+            "last"       : last,
+            "last2"      : last2,
+            "money"      : m,
+            "paper"      : p,
+            "get"        : g,
+            "direct"     : setDirect(thisMoney),
+            "thisMoney"  : thisMoney,
+            "thisMoney2" : thisMoney2,
+            "remark"     : r,
+        }
+
+        result.push(temp)
+        if (indexC === cosArray.length - 1) {
+            result.push({
+                "no"         : null,
+                "custom"     : '合计',
+                "last"       : t1,
+                "last2"      : t2,
+                "money"      : t3,
+                "paper"      : t4,
+                "get"        : t5,
+                "direct"     : null,
+                "thisMoney"  : t6,
+                "thisMoney2" : t7,
+                "remark"     : t8
+            })
+        }
+    })
+
+    // 四舍五入
+    result = fixed(result)
+
+    res.end(JSON.stringify(sendFinal(req.query.offset, req.query.limit, result)))
+})
+
 function formatter(data) {
     return null == data ? 0 : data;
 }
@@ -286,11 +436,44 @@ function sortBy(field) {
 function setDirect(data) {
     if (Number(data) > 0) {
         return '借'
-    } else if (0 === Number('data')) {
+    } else if (0 === Number(data)) {
         return '平'
     } else {
         return '贷'
     }
+}
+
+// 四舍五入
+function fixed(arr) {
+    arr.forEach(function (item, index) {
+        for (let key in item) {
+
+            if(typeof item[key] !== 'number'){
+                continue;
+            }
+            if (!isNaN(item[key])) {
+                item[key] = Math.round(item[key] * 100) / 100
+            }
+
+        }
+        arr[index] = item;
+    })
+
+    return arr;
+}
+
+function sendFinal(offset, limit, arr) {
+
+    // 处理result成total和rows的形式
+    offset = Number(offset) // 不是数字分页会全量数据.
+    limit = Number(limit)
+
+    arrN = {
+        "total": arr.length,
+        "rows": (offset + limit >= arr.length) ? arr.slice(offset, arr.length) : arr.slice(offset, offset + limit)
+    };
+
+    return arrN
 }
 
 endPoint.use(function (err, req, res, next) {
@@ -308,6 +491,6 @@ var server = endPoint.listen(8081, function () {
     var host = server.address().address
     var port = server.address().port
 
-    console.log("ers, 访问地址为 http://%s:%s", host, port)
+    console.log("ers express server is on http://%s:%s", host, port)
 
 });

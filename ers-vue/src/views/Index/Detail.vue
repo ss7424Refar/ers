@@ -14,7 +14,7 @@
                     </b-form-group>
                 </b-col>
                 <b-col md="4">
-                    <b-form-group label-cols-sm="2" label="终止时间:">
+                    <b-form-group label-cols-sm="2" label="结束时间:">
                         <b-form-datepicker v-model="form.end" class="mb-2" label-no-date-selected="请输入结束时间"></b-form-datepicker>
                     </b-form-group>
                 </b-col>
@@ -31,7 +31,9 @@
         </b-form>
 
         <hr>
-
+        <h3>
+            <b-badge variant="dark">查询结果</b-badge>
+        </h3>
         <BootstrapTable ref="table" :columns="columns" :options="options" @on-load-error="onLoadError"></BootstrapTable>
     </div>
 </template>
@@ -123,6 +125,8 @@
             setOption: function () {
                 this.$http.get("http://localhost:8081/setOption").then(res => {
                     this.cosOptions = res.data;
+                }).catch((err) => {
+                    this.message('get option fail: ' + err.response.data)
                 })
             },
             onLoadError: function (status, jqXHR) {
@@ -136,6 +140,10 @@
                     return;
                 }
 
+                if (this.$moment(this.form.start).isAfter(this.$moment(this.form.end))) {
+                    this.message('开始时间请小于结束时间!')
+                    return;
+                }
                 let formData = JSON.stringify(this.form)
                 this.options.queryParams = function (params) {
                     params.formData = formData

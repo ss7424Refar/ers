@@ -4,7 +4,7 @@
   "description": "A minimal Electron application",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "export NODE_ENV='development' && electron .",
     "build-linux": "electron-packager ./ --out ./ers-app --platform=linux --arch=x64 --overwrite",
     "build-window": "electron-packager ./ --out ./ers-app --platform=win32 --arch=x64 --overwrite"
   },
