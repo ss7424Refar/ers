@@ -10,7 +10,7 @@
   },
   "author": "refar",
   "devDependencies": {
-    "electron": "^8.2.3"
+    "electron": "^8.5.2"
   },
   "dependencies": {
     "cnpm": "^6.1.1",
